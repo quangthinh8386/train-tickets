@@ -13,7 +13,7 @@
         const inputFile = document.querySelector('#fileInput');
 
         //set chunkSize
-        const chunkSize = 100 * 1024; // 100kB
+        const chunkSize = 140 * 1024; // 100kB
         
         //charge file
         inputFile.onchange = async function(){
@@ -29,19 +29,27 @@
             if (!chunks.length) return
 
 
+            const fileNameRandom = Math.random().toString().slice(2,7)
+            const chunkPromise = []
             chunks.map((ck, index) => {
                 //multipart/formdata
                 const data = new FormData();
-                data.set("name", file.name + "-" + index);
+                const nameFileFinal = fileNameRandom + '-' + file.name + '-' + index
+                data.set("name", nameFileFinal);
                 // data.set("numfile", 20);
                 // [...inputFile.files].forEach(file => {
                 //     data.append("files", file);
                 // });
                 data.append("files", ck);
                 // call api
-                axios.post('http://localhost:3000/user/upload/large-file', data);
+                chunkPromise.push(axios.post('http://localhost:3000/user/upload/large-file', data));
                 // console.log("rs", rs);
             })
+
+            // call merge api
+            await Promise.all(chunkPromise);
+            const rs = await axios.get("http://localhost:3000/user/merge/file?file=chunks-" + fileNameRandom + '-' + file.name)
+            console.log("link full |", rs)
         }
     </script>
 </body>

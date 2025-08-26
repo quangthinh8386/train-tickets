@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors, BadRequestException, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors, BadRequestException, UploadedFiles, Query, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -8,9 +8,46 @@ import { storage } from './oss';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { console } from 'inspector';
+import { count } from 'console';
+import { Response } from 'express';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
+
+  @Get('merge/file')
+  mergefile(@Query("file") fileName: string, @Res() res: Response){
+    const nameDir = 'uploads/' + fileName;
+
+    // read
+    const files = fs.readdirSync(nameDir)
+
+    let startPos = 0, countFile = 0
+
+    files.map(file => {
+      const filePath = nameDir + "/" + file
+      console.log("filePath |", filePath)
+      const streamFile = fs.createReadStream(filePath)
+      streamFile.pipe(fs.createWriteStream('uploads/merge/' + fileName, {
+        start: startPos
+      })).on('finish', ()=> {
+        countFile++
+        console.log('countFile |', countFile)
+        if(files.length === countFile) {
+          fs.rm(nameDir, {
+            recursive: true
+          }, () => {})
+        }
+      })
+
+      startPos += fs.statSync(filePath).size
+    })
+
+    return res.json({
+      link: `http://localhost:3000/uploads/merge/${fileName}`,
+      fileName
+    })
+  }
 
   @Post('upload/large-file')
   @UseInterceptors(FilesInterceptor('files', 20, {
@@ -32,6 +69,9 @@ export class UserController {
 
     // copy
     fs.cpSync(files[0].path, nameDir + '/' + body.name);
+
+    // remove
+    fs.rmSync(files[0].path)
   }
 
   @Post('upload/avt')
