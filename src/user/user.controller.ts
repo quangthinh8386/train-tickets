@@ -11,8 +11,10 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { console } from 'inspector';
 import { count } from 'console';
 import { Response } from 'express';
+import { MyLogger } from 'src/logger/my.logger';
 @Controller('user')
 export class UserController {
+  private logger = new MyLogger()
   constructor(private readonly userService: UserService) { }
 
   @Get('merge/file')
@@ -102,7 +104,7 @@ export class UserController {
 
   @Post('new')
   register(@Body() registerUserDto: RegisterUserDto) {
-    console.log(registerUserDto);
+    this.logger.log("RegisterUserDto |", registerUserDto.accountname)
     return this.userService.register(registerUserDto);
   }
 
